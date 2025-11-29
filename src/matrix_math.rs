@@ -1,10 +1,9 @@
-use num_traits::Num;
+include!("tensor.rs")
 #[derive(Debug)]
 enum MatrixError {
     DimensionMismatch { expected: usize, actual: usize },
     EmptyMatrix,
 }
-
 fn transpose<T: Num + Copy + Default>(v: &[Vec<T>]) -> Result<Vec<Vec<T>>, MatrixError> {
     if v.is_empty() {
         return Err(MatrixError::EmptyMatrix);
