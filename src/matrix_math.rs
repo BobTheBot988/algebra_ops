@@ -36,7 +36,6 @@ fn multiplication<T: Num + Copy + Default>(
     m1: &[Vec<T>],
     m2: &[Vec<T>],
 ) -> Result<Vec<Vec<T>>, String> {
-    let m2_transposed;
     if m1.is_empty() || m2.is_empty() {
         return Err("The matrix passed as a parameter must not be empty !!!".to_string());
     }
@@ -48,15 +47,13 @@ fn multiplication<T: Num + Copy + Default>(
 
     let mut result_matrix = Vec::with_capacity(m1.len());
     let res = transpose(m2);
-    match res {
-        Ok(matrix) => {
-            m2_transposed = matrix;
-        }
+
+    let m2_transposed = match res {
+        Ok(matrix) => matrix,
         Err(err_msg) => {
-            let neu_msg = "Transposition failed:".to_string() + &err_msg;
-            return Err(neu_msg);
+            return Err("Transposition failed:".to_string() + &err_msg);
         }
-    }
+    };
 
     for row_a in m1 {
         let mut row_result = Vec::with_capacity(m2_transposed.len());
