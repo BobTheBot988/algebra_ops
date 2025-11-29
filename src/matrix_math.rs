@@ -59,7 +59,7 @@ fn multiplication<T: Num + Copy + Default>(
     let m2_transposed = match res {
         Ok(matrix) => matrix,
         Err(err_msg) => {
-            return Err("Transposition failed" + err_msg);
+            return Err(format!("Transposition failed: {:?}", err_msg));
         }
     };
 
