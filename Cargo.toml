@@ -1,0 +1,20 @@
+[package]
+name = "algebra_ops"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+num-traits = "0.2.19"
+[lints.rust]
+# You can also configure standard rustc lints here
+# unsafe_code = "forbid"
+
+[lints.clippy]
+# Sets "clippy::all" to a warning by default for ALL profiles.
+# To turn this into an error for Release builds, you must run:
+# cargo clippy --release -- -D warnings
+all = "warn"
+
+# You can also set specific lints
+# correct_by_default = "deny"
+# complexity = "warn"
