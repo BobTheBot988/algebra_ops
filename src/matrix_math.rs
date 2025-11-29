@@ -1,8 +1,13 @@
 use num_traits::Num;
+#[derive(Debug)]
+enum MatrixError {
+    DimensionMismatch { expected: usize, actual: usize },
+    EmptyMatrix,
+}
 
-fn transpose<T: Num + Copy + Default>(v: &[Vec<T>]) -> Result<Vec<Vec<T>>, String> {
+fn transpose<T: Num + Copy + Default>(v: &[Vec<T>]) -> Result<Vec<Vec<T>>, MatrixError> {
     if v.is_empty() {
-        return Err("The vector cannot be empty !!!".to_string());
+        return Err(MatrixError::EmptyMatrix);
     }
     let mut result_vec = Vec::with_capacity(v.len());
 
@@ -35,14 +40,17 @@ fn dot_product<T: Num + Copy + Default>(v1: &[T], v2: &[T]) -> T {
 fn multiplication<T: Num + Copy + Default>(
     m1: &[Vec<T>],
     m2: &[Vec<T>],
-) -> Result<Vec<Vec<T>>, String> {
+) -> Result<Vec<Vec<T>>, MatrixError> {
     if m1.is_empty() || m2.is_empty() {
-        return Err("The matrix passed as a parameter must not be empty !!!".to_string());
+        return Err(MatrixError::EmptyMatrix);
     }
     let cols_m1 = m1[0].len();
     let rows_m2 = m2.len();
     if cols_m1 != rows_m2 {
-        return Err("Matrix 1 columns must match  Matrix 2 length".to_string());
+        return Err(MatrixError::DimensionMismatch {
+            expected: cols_m1,
+            actual: rows_m2,
+        });
     }
 
     let mut result_matrix = Vec::with_capacity(m1.len());
@@ -51,7 +59,7 @@ fn multiplication<T: Num + Copy + Default>(
     let m2_transposed = match res {
         Ok(matrix) => matrix,
         Err(err_msg) => {
-            return Err("Transposition failed:".to_string() + &err_msg);
+            return Err("Transposition failed" + err_msg);
         }
     };
 
