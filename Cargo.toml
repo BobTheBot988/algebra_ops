@@ -2,6 +2,13 @@
 name = "algebra_ops"
 version = "0.1.0"
 edition = "2024"
+license = "LGPL 3.0 or later"
+repository = "https://github.com/BobTheBot988/algebra_ops"
+authors = ["Roberto Di Rosa"]
+description = "My implementation of algebraic operation made in rust, the objective of this is for it to be able to be used as a starting base to build neural networks in rust "
+readme = "README.md"
+keywords = ["array", "data-structure", "multidimensional", "matrix", "blas"]
+categories = ["data-structures", "science"]
 
 [dependencies]
 num-traits = "0.2.19"
