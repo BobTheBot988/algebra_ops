@@ -1,6 +1,7 @@
-use num_traits::{Num,pow};
+use num_traits::{Float, Num, ToPrimitive};
 use std::fmt;
 // Float vs Int: Num includes Integers. Many Deep Learning ops (Sigmoid, Sqrt, Tanh) only work on Floats (f32/f64).
+//Add, Relu, Scale: Use O(1) Views. These are O(N) operations, so an O(N) copy would double the runtime.
 // You might need to constrain some impl blocks to Float or Real traits.
 //
 //
@@ -8,7 +9,6 @@ use std::fmt;
 //
 // Implement sum (Reduction along an axis).
 //
-// Implement exp and log (needed for Softmax).
 //
 // Build a simple Linear layer using the above.
 //
@@ -17,15 +17,10 @@ struct Tensor<T: Num + Copy> {
     data: Vec<T>,
     // shape is Y,X
     shape: Vec<usize>,
+    dim: usize,
     strides: Vec<usize>,
 }
-#[derive(Debug)]
-pub struct TensorIntoIterator<T: Num + Copy> {
-    tensor: Tensor<T>,
-    index: usize,
-    end: usize,
-    window: usize,
-}
+
 #[derive(Debug)]
 enum TensorError {
     DimensionMismatch { expected: usize, actual: usize },
@@ -46,18 +41,66 @@ impl fmt::Display for TensorError {
         }
     }
 }
-
-impl<T: Num + Copy> Tensor<T> {
-    fn new(data: Vec<T>, shape: Vec<usize>) -> Self {
-        let strides: Vec<usize> = calculate_strides(&shape);
-        Tensor { data, shape, strides }
-    }
-        
-    fn exp_(&mut self)->Result<T,TensorError>{
-        for num in self.data.iter_mut(){
-            *num = ;
+impl<T: Num + Copy + Float> Tensor<T> {
+    pub fn ln_(&mut self) {
+        for val in self.data.iter_mut() {
+            *val = val.ln();
         }
     }
+    fn exp_(&mut self) {
+        for val in self.data.iter_mut() {
+            *val = val.exp();
+        }
+    }
+}
+
+impl<T: Num + Copy + ToPrimitive> Tensor<T> {
+    fn new(data: Vec<T>, shape: Vec<usize>) -> Self {
+        let strides: Vec<usize> = calculate_strides(&shape);
+        let dim = strides.len();
+        Tensor {
+            data,
+            shape,
+            dim,
+            strides,
+        }
+    }
+    pub fn to_f64(&self) -> Tensor<f64> {
+        let new_data = self.data.iter().map(|v| v.to_f64().unwrap()).collect();
+        Tensor::new(new_data, self.shape.clone())
+    }
+    pub fn to_f32(&self) -> Tensor<f32> {
+        let new_data = self.data.iter().map(|v| v.to_f32().unwrap()).collect();
+        Tensor::new(new_data, self.shape.clone())
+    }
+
+    pub fn ln(&self) -> Tensor<f64> {
+        let new_data: Vec<f64> = self
+            .data
+            .iter()
+            .map(|&val| {
+                // Convert to float first, then calculate ln
+                // .unwrap() is safe here because primitive numbers always convert
+                val.to_f64().unwrap().ln()
+            })
+            .collect();
+
+        Tensor::new(new_data, self.shape.clone())
+    }
+    fn exp(&self) -> Tensor<f64> {
+        let new_data: Vec<f64> = self
+            .data
+            .iter()
+            .map(|&val| {
+                // Convert to float first, then calculate ln
+                // .unwrap() is safe here because primitive numbers always convert
+                val.to_f64().unwrap().ln()
+            })
+            .collect();
+
+        Tensor::new(new_data, self.shape.clone())
+    }
+
     fn get_index(&self, indices: &[usize]) -> usize {
         let mut index: usize = 0;
         for (i, &dim_index) in indices.iter().enumerate() {
@@ -78,7 +121,22 @@ impl<T: Num + Copy> Tensor<T> {
         }
         Ok(())
     }
+    fn sum(&self) -> Result<T, TensorError> {
+        let mut sum = T::zero();
+        for num in self.data.iter() {
+            sum = sum + *num;
+        }
+        Ok(sum)
+    }
+    fn cumsum(&self) -> Result<Tensor<T>, TensorError> {
+        let mut data = Vec::with_capacity(self.data.len());
+        data[0] = T::zero();
+        for i in 1..self.data.len() {
+            data.push(self.data[i - 1] + self.data[i]);
+        }
 
+        Ok(Tensor::new(data, self.shape.clone()))
+    }
     fn mul(&self, t1: Self, t2: Self) -> Result<Self, TensorError> {
         todo!()
     }
@@ -106,9 +164,8 @@ impl<T: Num + Copy> Tensor<T> {
 
         // 2. Transpose m2 (to allow row-row dot products)
         // Note: This relies on your transpose implementation returning a new Tensor
-        let m2_transposed = 
-            transpose(m2)
-            .map_err(|e| TensorError::ComputationFailed(format!("Transpose failed: {}", e)))?;
+        let m2_transposed =
+            Tensor::transpose(m2).map_err(|e| TensorError::ComputationFailed(format!("Transpose failed: {}", e)))?;
 
         // 3. Prepare result buffer
         // The result shape will be [rows_self, cols_m2]
@@ -156,12 +213,7 @@ impl<T: Num + Copy> Tensor<T> {
             }
         }
 
-        let strides = calculate_strides(shape);
-        Ok(Tensor {
-            data,
-            shape: shape.clone(),
-            strides,
-        })
+        Ok(Tensor::new(data, shape.clone()))
     }
     // Real in memory representation:
     // A:0,B:1,C:2,D:3,E:4,F:5,G:6,H:7,I:8,L:9,M:10,N:11
@@ -191,26 +243,15 @@ impl<T: Num + Copy> Tensor<T> {
 
         Ok(())
     }
-
-    fn transpose(input &Self) -> Result<Self, TensorError> {
+    // Look into Packing the way ndarray does it
+    fn transpose(input: &Self) -> Result<Self, TensorError> {
         let mut t_res = input.clone();
-        t_res.transpose_().map_err(|err_msg| err_msg);
+
+        for num in input.data.iter() {}
+        // t_res.transpose_().map_err(|err_msg| err_msg);
         Ok(t_res)
     }
-
-    fn dot_product(v1: &[T], v2: &[T]) -> Result<T, TensorError> {
-        if v1.is_empty() || v2.is_empty() {
-            return Err(TensorError::ComputationFailed("The vectors must contain values".to_string()));
-        }
-
-        assert_eq!(v1.len(), v2.len(), "Vertices lengths should be equal");
-
-        let mut sum = T::zero();
-        for (&value1, &value2) in v1.iter().zip(v2) {
-            sum = sum + (value1 * value2);
-        }
-        Ok(sum)
-    }
+    fn permute_(&mut self, input_list: Vec<usize>) {}
 }
 
 // For a shape [3, 4], strides are [4, 1]
