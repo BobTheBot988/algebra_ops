@@ -1,9 +1,25 @@
-include!("tensor.rs")
+use num_traits::Num;
+use std::fmt;
 #[derive(Debug)]
 enum MatrixError {
     DimensionMismatch { expected: usize, actual: usize },
     EmptyMatrix,
+    ComputationFailed(String),
 }
+impl fmt::Display for MatrixError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            MatrixError::DimensionMismatch { expected, actual } => {
+                write!(f, "Wrong Dimensions expected:{},actual:{}.", expected, actual)
+            }
+            MatrixError::EmptyMatrix => {
+                write!(f, "The passed Matrix is empty.")
+            }
+            MatrixError::ComputationFailed(msg) => write!(f, "Computation Error,{}", msg),
+        }
+    }
+}
+
 fn transpose<T: Num + Copy + Default>(v: &[Vec<T>]) -> Result<Vec<Vec<T>>, MatrixError> {
     if v.is_empty() {
         return Err(MatrixError::EmptyMatrix);
@@ -21,7 +37,7 @@ fn transpose<T: Num + Copy + Default>(v: &[Vec<T>]) -> Result<Vec<Vec<T>>, Matri
 }
 
 fn dot_product<T: Num + Copy + Default>(v1: &[T], v2: &[T]) -> T {
-    if v1.is_empty() {
+    if v1.is_empty() || v2.is_empty() {
         return T::default();
     }
 
@@ -36,10 +52,7 @@ fn dot_product<T: Num + Copy + Default>(v1: &[T], v2: &[T]) -> T {
 }
 
 // 1. Matrix Multiplication (M x K) * (K x N) -> (M x N)
-fn multiplication<T: Num + Copy + Default>(
-    m1: &[Vec<T>],
-    m2: &[Vec<T>],
-) -> Result<Vec<Vec<T>>, MatrixError> {
+fn multiplication<T: Num + Copy + Default>(m1: &[Vec<T>], m2: &[Vec<T>]) -> Result<Vec<Vec<T>>, MatrixError> {
     if m1.is_empty() || m2.is_empty() {
         return Err(MatrixError::EmptyMatrix);
     }
@@ -58,7 +71,7 @@ fn multiplication<T: Num + Copy + Default>(
     let m2_transposed = match res {
         Ok(matrix) => matrix,
         Err(err_msg) => {
-            return Err(format!("Transposition failed: {:?}", err_msg));
+            return Err(MatrixError::ComputationFailed(format!("Transposition failed: {}", err_msg)));
         }
     };
 
